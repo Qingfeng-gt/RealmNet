@@ -1,0 +1,56 @@
+# Compilation directories
+cmake-build-debug-msvc/
+cmake-build-debug/
+cmake-build-release/
+build/
+bin/
+lib/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.ncb
+*.obj
+*.pdb
+*.ilk
+*.exp
+
+# Windows executables and libraries
+*.exe
+*.dll
+*.lib
+*.pdb
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+*.cmake
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+*~
+
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+# HTTP client requests
+/httpRequests/
+
+# Shelf
+/shelf/
