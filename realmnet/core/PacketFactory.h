@@ -25,12 +25,12 @@ namespace RealmNet {
             return f;
         }
 
-        void registerPacket(
-            BasePacket::TypeID id,
-            Creator creator)
+        template<typename T>
+        void registerPacket()
         {
-            m_registry[id] =
-                std::move(creator);
+            m_registry[T::ID] = []() {
+                return std::make_unique<T>();
+            };
         }
 
         std::unique_ptr<BasePacket>

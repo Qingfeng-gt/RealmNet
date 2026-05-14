@@ -5,14 +5,6 @@
 
 namespace RealmNet {
 
-    void PacketDispatcher::registerHandler(
-        uint32_t type,
-        Handler handler)
-    {
-        m_handlers[type] =
-            std::move(handler);
-    }
-
     void PacketDispatcher::dispatch(
         Connection& conn,
         BasePacket& packet)

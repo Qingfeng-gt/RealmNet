@@ -17,6 +17,8 @@ namespace RealmNet {
 
         using TypeID = uint32_t;
 
+        static constexpr TypeID ID = 0;
+
         virtual ~BasePacket() = default;
 
         virtual TypeID type() const = 0;

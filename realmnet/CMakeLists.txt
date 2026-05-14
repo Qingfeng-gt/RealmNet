@@ -17,6 +17,7 @@ add_library(RealmNetLib STATIC
         core/PacketCodec.h
         core/Connection.h
         core/PacketDispatcher.h
+        core/PacketHandler.h
 )
 
 target_include_directories(RealmNetLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include "core/PacketHandler.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -21,14 +23,12 @@
 #include "core/Connection.h"
 #include "core/PacketDispatcher.h"
 
-class LoginHandler
+class LoginHandler : public RealmNet::PacketHandler<LoginRequest>
 {
 public:
-    void operator()(
-        RealmNet::Connection& conn,
-        RealmNet::BasePacket& packet)
+    void handle(RealmNet::Connection &conn, const LoginRequest &packet) override
     {
-        auto& req = static_cast<LoginRequest&>(packet);
+        auto& req = packet;
 
         std::cout
             << "Received login request, account: "
@@ -76,9 +76,7 @@ int main()
     }
 #endif
 
-    g_dispatcher.registerHandler(
-        LoginRequest::ID,
-        LoginHandler());
+    g_dispatcher.registerHandler<LoginRequest,LoginHandler>();
 
     int listenFd = socket(AF_INET, SOCK_STREAM, 0);
 

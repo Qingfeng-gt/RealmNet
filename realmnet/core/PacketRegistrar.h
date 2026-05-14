@@ -5,19 +5,11 @@
 
 namespace RealmNet {
     template<typename T>
-    class PacketRegistrar
-    {
+    class PacketRegistrar {
     public:
-
-        PacketRegistrar()
-        {
+        PacketRegistrar() {
             PacketFactory::instance()
-                .registerPacket(
-                    T::ID,
-                    []()
-                    {
-                        return std::make_unique<T>();
-                    });
+                    .registerPacket<T>();
         }
     };
 }
@@ -28,9 +20,5 @@ namespace { \
         g_registrar_##Class; \
 }
 
-#define FORCE_PACKET_REGISTRATION() \
-do { \
-    (void)g_registrar_##Class; \
-} while(0)
 
 #endif //REALMNET_PACKETREGISTRAR_H
