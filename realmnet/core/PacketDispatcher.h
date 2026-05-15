@@ -9,22 +9,23 @@
 #include <unordered_map>
 #include <functional>
 
+#include "Connection.h"
 
-namespace RealmNet {
+
+namespace RealmNet
+{
     class BasePacket;
-    class Connection;
+    class IConnection;
 
     class PacketDispatcher
     {
     public:
-
-
-        template<typename PacketT, typename HandlerT>
+        template <typename PacketT, typename HandlerT>
         void registerHandler()
         {
-            m_handlers[PacketT::ID] = [](Connection& conn,
-               BasePacket& packet) {
-
+            m_handlers[PacketT::ID] = [](IConnection& conn,
+                                         BasePacket& packet)
+            {
                 HandlerT handler;
 
                 handler.handle(
@@ -37,13 +38,13 @@ namespace RealmNet {
         }
 
         void dispatch(
-            Connection& conn,
+            IConnection& conn,
             BasePacket& packet);
 
     private:
         using Handler =
-                    std::function<
-                        void(Connection&, BasePacket&)>;
+        std::function<
+            void(IConnection&, BasePacket&)>;
         std::unordered_map<
             uint32_t,
             Handler> m_handlers;

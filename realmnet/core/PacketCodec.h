@@ -9,11 +9,11 @@
 
 #include "PacketFactory.h"
 
-namespace RealmNet {
+namespace RealmNet
+{
     class PacketCodec
     {
     public:
-
         std::vector<uint8_t>
         encode(const BasePacket& packet);
 
@@ -21,7 +21,7 @@ namespace RealmNet {
             std::vector<uint8_t>& buffer,
             std::function<
                 void(std::unique_ptr<BasePacket>)>
-                callback);
+            callback);
     };
 }
 #endif //REALMNET_PACKETCODEC_H

@@ -1,19 +1,18 @@
-
 #include "PacketCodec.h"
 #include "BinaryWriter.h"
 #include "BinaryReader.h"
 #include <cstring>
 
-namespace RealmNet {
-
+namespace RealmNet
+{
     std::vector<uint8_t>
     PacketCodec::encode(const BasePacket& packet)
     {
-        RealmNet::BinaryWriter writer;
+        BinaryWriter writer;
 
         writer.write(packet.type());
 
-        const_cast<BasePacket&>(packet)
+        packet
             .serialize(writer);
 
         auto& buffer = writer.buffer();
@@ -24,7 +23,7 @@ namespace RealmNet {
 
         std::vector<uint8_t> result;
 
-        const uint8_t* sizePtr =
+        auto sizePtr =
             reinterpret_cast<
                 const uint8_t*>(&size);
 
@@ -45,7 +44,7 @@ namespace RealmNet {
         std::vector<uint8_t>& buffer,
         std::function<
             void(std::unique_ptr<BasePacket>)>
-            callback)
+        callback)
     {
         if (buffer.size() < sizeof(uint32_t))
             return;
@@ -70,12 +69,12 @@ namespace RealmNet {
 
         auto packet =
             PacketFactory::instance()
-                .create(packetType);
+            .create(packetType);
 
         if (!packet)
             return;
 
-        RealmNet::BinaryReader reader(
+        BinaryReader reader(
             packetData + sizeof(packetType),
             packetSize - sizeof(packetType));
 
@@ -83,5 +82,4 @@ namespace RealmNet {
 
         callback(std::move(packet));
     }
-
 }

@@ -5,16 +5,18 @@
 #ifndef REALMNET_PACKETHANDLER_H
 #define REALMNET_PACKETHANDLER_H
 
-namespace RealmNet {
-    class Connection;
+namespace RealmNet
+{
+    class IConnection;
 
-    template<typename T>
-    class PacketHandler {
+    template <typename T>
+    class PacketHandler
+    {
     public:
         virtual ~PacketHandler() = default;
 
         virtual void handle(
-            Connection& conn,
+            IConnection& conn,
             const T& packet
         ) = 0;
     };

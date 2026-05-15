@@ -10,14 +10,14 @@
 
 #include "BasePacket.h"
 
-namespace RealmNet {
+namespace RealmNet
+{
     class PacketFactory
     {
     public:
-
         using Creator =
-            std::function<
-                std::unique_ptr<BasePacket>()>;
+        std::function<
+            std::unique_ptr<BasePacket>()>;
 
         static PacketFactory& instance()
         {
@@ -25,10 +25,11 @@ namespace RealmNet {
             return f;
         }
 
-        template<typename T>
+        template <typename T>
         void registerPacket()
         {
-            m_registry[T::ID] = []() {
+            m_registry[T::ID] = []()
+            {
                 return std::make_unique<T>();
             };
         }
@@ -46,11 +47,9 @@ namespace RealmNet {
         }
 
     private:
-
         std::unordered_map<
             BasePacket::TypeID,
             Creator> m_registry;
     };
-
 }
 #endif //REALMNET_PACKETFACTORY_H

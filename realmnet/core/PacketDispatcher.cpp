@@ -1,12 +1,11 @@
-
 #include "PacketDispatcher.h"
 #include "BasePacket.h"
 #include "Connection.h"
 
-namespace RealmNet {
-
+namespace RealmNet
+{
     void PacketDispatcher::dispatch(
-        Connection& conn,
+        IConnection& conn,
         BasePacket& packet)
     {
         auto it =
@@ -16,5 +15,4 @@ namespace RealmNet {
         if (it != m_handlers.end())
             it->second(conn, packet);
     }
-
 }

@@ -1,15 +1,17 @@
-
 #ifndef REALMNET_PACKETREGISTRAR_H
 #define REALMNET_PACKETREGISTRAR_H
 #include "PacketFactory.h"
 
-namespace RealmNet {
-    template<typename T>
-    class PacketRegistrar {
+namespace RealmNet
+{
+    template <typename T>
+    class PacketRegistrar
+    {
     public:
-        PacketRegistrar() {
+        PacketRegistrar()
+        {
             PacketFactory::instance()
-                    .registerPacket<T>();
+                .registerPacket<T>();
         }
     };
 }

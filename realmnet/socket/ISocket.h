@@ -6,11 +6,12 @@
 #define REALMNET_ISOCKET_H
 
 #include <cstdint>
-namespace RealmNet {
+
+namespace RealmNet
+{
     class ISocket
     {
     public:
-
         virtual ~ISocket() = default;
 
         virtual bool send(

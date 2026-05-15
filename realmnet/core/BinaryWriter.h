@@ -8,15 +8,15 @@
 #include <vector>
 #include <string>
 
-namespace RealmNet {
+namespace RealmNet
+{
     class BinaryWriter
     {
     public:
-
-        template<typename T>
+        template <typename T>
         void write(const T& value)
         {
-            const uint8_t* ptr =
+            auto ptr =
                 reinterpret_cast<
                     const uint8_t*>(&value);
 
@@ -48,7 +48,6 @@ namespace RealmNet {
         }
 
     private:
-
         std::vector<uint8_t> m_buffer;
     };
 }

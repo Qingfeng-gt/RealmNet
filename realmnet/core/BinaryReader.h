@@ -8,11 +8,11 @@
 #include <string>
 #include <cstring>
 
-namespace RealmNet {
+namespace RealmNet
+{
     class BinaryReader
     {
     public:
-
         BinaryReader(
             const uint8_t* data,
             size_t size)
@@ -22,7 +22,7 @@ namespace RealmNet {
         {
         }
 
-        template<typename T>
+        template <typename T>
         T read()
         {
             T value;
@@ -54,7 +54,6 @@ namespace RealmNet {
         }
 
     private:
-
         const uint8_t* m_data;
 
         size_t m_size;
