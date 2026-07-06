@@ -42,15 +42,15 @@ namespace RealmNet
 
 #define REALMNET_PACKET(name) \
     public : \
-        static constexpr std::string_view TypeName = #name; \
-        static constexpr TypeID ID = RealmNet::fnv1a(TypeName.data()); \
+        static constexpr const char* TypeName = #name; \
+        static constexpr TypeID ID = RealmNet::fnv1a(#name); \
         TypeID type() const override \
         { \
             return ID; \
         } \
         std::string typeName() const override \
         { \
-            return TypeName.data(); \
-        } 
+            return TypeName; \
+        }
 
 #endif //REALMNET_BASEPACKET_H

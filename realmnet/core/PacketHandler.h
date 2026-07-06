@@ -9,15 +9,15 @@ namespace RealmNet
 {
     class IConnection;
 
-    template <typename T>
+    template <typename ConnectionT, typename PacketT>
     class PacketHandler
     {
     public:
         virtual ~PacketHandler() = default;
 
         virtual void handle(
-            IConnection& conn,
-            const T& packet
+            ConnectionT conn,
+            PacketT packet
         ) = 0;
     };
 }

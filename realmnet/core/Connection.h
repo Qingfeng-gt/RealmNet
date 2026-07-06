@@ -16,21 +16,21 @@
 namespace RealmNet
 {   
     //连接接口
-    class IConnection
+    class IConnection 
     {
     public:
-        using PacketCallback = std::function<void(IConnection&, BasePacket&)>;
+        using PacketCallback = std::function<void(std::shared_ptr<IConnection>,std::shared_ptr<RealmNet::BasePacket>)>;
         
         virtual ~IConnection() = default;
         virtual bool sendPacket(const BasePacket& packet) = 0;
         virtual bool onReadable() = 0;
-        virtual void setPacketCallback(std::function<void(IConnection&, BasePacket&)> callback) = 0;
+        virtual void setPacketCallback(PacketCallback callback) = 0;
         virtual bool isConnected() const = 0;
         virtual std::shared_ptr<ISocket> socket() const = 0;
     };
     
     template <typename SocketType = ISocket>
-    class Connection : public IConnection
+    class Connection : public IConnection,public std::enable_shared_from_this<IConnection>
     {
     public:
         explicit Connection(std::shared_ptr<SocketType> socket)
@@ -100,9 +100,8 @@ namespace RealmNet
                                         << "Packet type:"
                                         << pkt->typeName() << "("<< pkt->type() << ")"
                                         << std::endl;
-
                                     if (m_packetCallback)
-                                        m_packetCallback(*this, *pkt);
+                                        m_packetCallback(shared_from_this(), std::move(pkt));
                                 });
 
                 m_recvBuffer.erase(

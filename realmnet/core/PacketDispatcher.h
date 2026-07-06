@@ -37,17 +37,23 @@ namespace RealmNet
             };
         }
 
+        template <typename PacketT>
+        void registerHandler(std::function<void(IConnection&, PacketT&)> handlerFn)
+        {
+            m_handlers[PacketT::ID] = [fn = std::move(handlerFn)](IConnection& conn, BasePacket& packet)
+            {
+                fn(conn, static_cast<PacketT&>(packet));
+            };
+        }
+
+
         void dispatch(
             IConnection& conn,
             BasePacket& packet);
 
     private:
-        using Handler =
-        std::function<
-            void(IConnection&, BasePacket&)>;
-        std::unordered_map<
-            uint32_t,
-            Handler> m_handlers;
+        using Handler = std::function<void(IConnection&, BasePacket&)>;
+        std::unordered_map<uint32_t,Handler> m_handlers;
     };
 }
 #endif //REALMNET_PACKETDISPATCHER_H

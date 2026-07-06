@@ -12,6 +12,8 @@ if(MINGW)
 elseif(MSVC)
     # MSVC 静态链接运行时库
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    # 指定源文件编码为 UTF-8，确保中文注释正确解析
+    add_compile_options(/utf-8)
 endif()
 
 add_subdirectory(realmnet)
