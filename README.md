@@ -4,314 +4,196 @@
 
 ---
 
-## 项目简介
+## 简介
 
-**RealmNet（中文名：墟界）** 是一个**可扩展的网络数据包框架**，专注于数据包的编解码、分发和协议管理。通过**少量胶水代码**即可与任意 Socket 后端（BSD Socket、epoll、kqueue、IOCP）连接，快速构建高效的网络通信系统。
+**RealmNet** 是一个 C++ 网络数据包框架，专注于协议的编解码、分发和管理。通过实现 `ISocket` 接口，可以接入任意 Socket 后端（BSD Socket / epoll / IOCP 等），快速构建网络通信系统。
 
-**核心框架**位于 `realmnet/` 目录下，提供完整的数据包处理基础设施。根目录下的 `server/` 和 `client/` 只是使用该框架结合 BSD Socket 实现的**简单登录示例**，用于演示框架的基本用法。
-
-### 核心设计理念
+核心框架在 `realmnet/` 下。根目录 `server/`、`client/` 是基于 BSD Socket 的登录示例。
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│           业务层 (Business Layer)                   │
-├─────────────────────────────────────────────────────┤
-│  ┌─────────────┐                                   │
-│  │ Dispatcher  │ ←── Handler 注册与分发            │
-│  └──────┬──────┘                                   │
-│         ↓                                          │
-│  ┌─────────────┐                                   │
-│  │  Factory    │ ←── 自动协议注册与创建            │
-│  └──────┬──────┘                                   │
-│         ↓                                          │
-│  ┌─────────────┐                                   │
-│  │   Codec     │ ←── 序列化/反序列化              │
-│  └──────┬──────┘                                   │
-│         ↓                                          │
-│  ┌─────────────┐     ┌─────────────────────────┐   │
-│  │ Connection  │────→│   ISocket (接口抽象)     │   │
-│  └─────────────┘     └─────────────────────────┘   │
-│                           ↓                        │
-│              ┌───────────┼───────────┐             │
-│              ▼           ▼           ▼             │
-│         BSD Socket   epoll/io_uring   IOCP         │
-│       (同步阻塞)   (Linux 高并发)  (Windows 高并发) │
-└─────────────────────────────────────────────────────┘
+                 ┌──────────────┐
+                 │   Handler    │  ← 你的业务逻辑
+                 └──────┬───────┘
+                        ↓
+              ┌─────────────────┐
+              │ PacketDispatcher│  ← 按 Packet::ID 自动路由
+              └────────┬────────┘
+                       ↓
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+   ┌─────────┐   ┌──────────┐   ┌──────────┐
+   │ Factory │   │  Codec   │   │ TypeHash │
+   └─────────┘   └──────────┘   └──────────┘
+                       ↓
+               ┌──────────────┐
+               │  Connection  │  ← 胶水层，绑定 codec + socket
+               └──────┬───────┘
+                      ↓
+               ┌──────────────┐
+               │   ISocket    │  ← 扩展点
+               └──────┬───────┘
+        ┌─────────────┼─────────────┐
+        ▼             ▼             ▼
+   BSD Socket       epoll         IOCP
 ```
 
-### 核心优势
+---
 
-| 特性 | 说明 |
-|------|------|
-| **协议与传输解耦** | 数据包处理与 Socket 实现完全分离 |
-| **可扩展架构** | 通过 ISocket 接口轻松切换后端 |
-| **自动协议注册** | 基于 TypeHash 的零配置协议管理 |
-| **高性能分发** | 无 switch-case 的高效数据包路由 |
-| **少量胶水代码** | 快速接入任意 Socket 后端 |
+## 开始
 
-### 适用场景
+### 编译
 
-- **MMO 游戏**：大规模并发连接管理
-- **实时对战**：低延迟数据包传输
-- **RPC 服务**：高效远程调用
-- **网关服务**：协议转发与路由
-- **微服务**：轻量级跨服务通信
-- **长连接系统**：稳定的持久连接管理
+要求 CMake 3.20+，C++20。
+
+**MSVC：**
+```bash
+mkdir build && cd build
+cmake .. -G "Visual Studio 17 2022" -A x64
+cmake --build . --config Debug
+```
+
+**MinGW：**
+```bash
+mkdir build && cd build
+cmake .. -G "MinGW Makefiles" \
+  -DCMAKE_C_COMPILER=D:/Qt/Tools/mingw1310_64/bin/gcc.exe \
+  -DCMAKE_CXX_COMPILER=D:/Qt/Tools/mingw1310_64/bin/g++.exe
+cmake --build .
+```
+
+### 运行
+
+先启服务端，再启客户端：
+
+```bash
+./Debug/RealmNetServer.exe   # 服务端
+./RealmNetClient.exe         # 客户端
+```
+
+---
+
+## 示例
+
+### 定义协议
+
+```cpp
+class LoginRequest : public RealmNet::BasePacket
+{
+    REALMNET_PACKET(LoginRequest)    // 自动生成 type/typeName/ID
+
+    std::string account;
+    std::string password;
+
+    void serialize(RealmNet::BinaryWriter& w) const override {
+        w.writeString(account);
+        w.writeString(password);
+    }
+    void deserialize(RealmNet::BinaryReader& r) override {
+        account = r.readString();
+        password = r.readString();
+    }
+};
+REGISTER_PACKET(LoginRequest);
+```
+
+### 服务端
+
+```cpp
+#include "common/Server.h"
+#include "common/Packets.h"
+
+int main()
+{
+    Server<TcpSocket> server;
+    server.setPort(9000);
+
+    // 注册 lambda 处理器，packet 已自动转型为 LoginRequest&
+    server.registerHandler<LoginRequest>(
+        [](RealmNet::IConnection& conn, LoginRequest& packet) {
+            LoginResponse resp;
+            resp.success = (packet.password == "123456");
+            conn.sendPacket(resp);
+        });
+
+    server.start();
+}
+```
+
+### 客户端
+
+```cpp
+#include "common/Client.h"
+#include "common/Packets.h"
+
+int main()
+{
+    Client<TcpSocket> client;
+
+    client.registerHandler<LoginResponse>(
+        [](RealmNet::IConnection& conn, LoginResponse& packet) {
+            std::cout << packet.message << std::endl;
+        });
+
+    client.connect("127.0.0.1", 9000);
+
+    LoginRequest req;
+    req.account = "admin";
+    req.password = "123456";
+    client.send(req);
+
+    client.run();
+}
+```
 
 ---
 
 ## 目录结构
 
-```text
+```
 RealmNet/
+├── realmnet/core/          # 框架核心
+│   ├── BasePacket.h        # 数据包基类
+│   ├── BinaryReader.h/writer.h  # 二进制读写
+│   ├── Connection.h        # 胶水层
+│   ├── PacketCodec.h       # 编解码
+│   ├── PacketDispatcher.h  # 分发器
+│   ├── PacketFactory.h     # 工厂
+│   ├── PacketRegistrar.h   # 自动注册
+│   └── TypeHash.h          # 无 enum 协议 ID
 │
-├── realmnet/           # 【核心框架】网络数据包处理基础设施
-│   ├── core/           # 核心模块
-│   │   ├── BasePacket.h        # 数据包基类（定义协议接口）
-│   │   ├── BinaryReader.h      # 二进制读取器
-│   │   ├── BinaryWriter.h      # 二进制写入器
-│   │   ├── Connection.h/cpp    # 连接管理（胶水层）
-│   │   ├── PacketCodec.h/cpp   # 编解码器
-│   │   ├── PacketDispatcher.h/cpp  # 数据包分发器
-│   │   ├── PacketFactory.h     # 数据包工厂
-│   │   ├── PacketRegistrar.h   # 协议自动注册器
-│   │   └── TypeHash.h          # 类型哈希（无 enum 协议 ID）
-│   │
-│   └── socket/         # Socket 抽象层（扩展点）
-│       └── ISocket.h   # Socket 接口定义（核心扩展接口）
+├── realmnet/socket/
+│   └── ISocket.h           # Socket 抽象接口
 │
-├── common/             # 【示例共享代码】
-│   ├── Packets.h       # 示例协议定义（LoginRequest/Response）
-│   ├── TcpSocket.h     # BSD Socket 实现（胶水示例）
-│   └── TcpSocket.cpp
+├── common/                 # 示例代码
+│   ├── Packets.h           # 协议定义
+│   ├── Server.h            # 服务端封装
+│   ├── Client.h            # 客户端封装
+│   ├── TcpSocket.h/cpp     # ISocket 的 BSD 实现
 │
-├── server/             # 【示例服务端】使用 BSD Socket 的服务端
-│   └── main.cpp
-│
-├── client/             # 【示例客户端】使用 BSD Socket 的客户端
-│   └── main.cpp
-│
-└── CMakeLists.txt      # 构建配置
-```
-
-### 目录职责说明
-
-| 目录 | 职责 | 说明 |
-|------|------|------|
-| `realmnet/core/` | **数据包核心** | 协议、编解码、分发（核心价值） |
-| `realmnet/socket/` | **Socket 抽象** | ISocket 接口（扩展点） |
-| `common/` | **示例实现** | TcpSocket 胶水代码示例 |
-| `server/client/` | **演示代码** | 使用框架的示例程序 |
-
----
-
-## 快速开始
-
-### 编译环境
-
-- CMake 3.16+
-- C++17 编译器（MSVC 2022 / MinGW 8.0+ / GCC 8.0+）
-
-### 编译步骤
-
-```bash
-# 创建构建目录
-mkdir cmake-build-debug-msvc
-cd cmake-build-debug-msvc
-
-# 配置项目
-cmake .. -G "Visual Studio 17 2022" -A x64
-
-# 构建项目
-cmake --build . --config Debug
-```
-
-### 运行示例
-
-**启动服务端：**
-```bash
-cmake-build-debug-msvc/Debug/RealmNetServer.exe
-```
-
-**启动客户端：**
-```bash
-cmake-build-debug-msvc/Debug/RealmNetClient.exe
+├── server/main.cpp         # 服务端示例
+├── client/main.cpp         # 客户端示例
+└── CMakeLists.txt
 ```
 
 ---
 
-## 使用框架开发
+## 扩展
 
-### 第一步：定义协议
-
-```cpp
-#include "realmnet/core/BasePacket.h"
-#include "realmnet/core/PacketRegistrar.h"
-
-class LoginRequest : public BasePacket
-{
-public:
-    static constexpr TypeID ID = fnv1a("LoginRequest");
-    
-    std::string account;
-    std::string password;
-    
-    TypeID type() const override { return ID; }
-    
-    void serialize(BinaryWriter& writer) const override {
-        writer.writeString(account);
-        writer.writeString(password);
-    }
-    
-    void deserialize(BinaryReader& reader) override {
-        account = reader.readString();
-        password = reader.readString();
-    }
-};
-
-REGISTER_PACKET(LoginRequest)  // 自动注册到工厂
-```
-
-### 第二步：实现 Handler
+接入新后端只需实现 `ISocket`：
 
 ```cpp
-class LoginHandler
+class MyEpollSocket : public RealmNet::ISocket
 {
-public:
-    void operator()(Connection& conn, BasePacket& packet) {
-        auto& req = static_cast<LoginRequest&>(packet);
-        
-        LoginResponse resp;
-        resp.success = (req.password == "123456");
-        resp.message = resp.success ? "登录成功" : "密码错误";
-        
-        conn.sendPacket(resp);
-    }
+    bool send(const uint8_t* data, size_t len) override { /* epoll send */ }
+    int  recv(uint8_t* buf, size_t len) override      { /* epoll recv */ }
+    void close() override                              { /* ... */ }
 };
 ```
 
-### 第三步：接入 Socket 后端
-
-```cpp
-// 1. 创建 Socket 实例（可替换为 epoll/IOCP 实现）
-auto socket = std::make_shared<TcpSocket>(clientFd);
-
-// 2. 创建 Connection（胶水层）
-Connection conn(socket);
-
-// 3. 注册 Handler 并启动
-PacketDispatcher dispatcher;
-dispatcher.registerHandler(LoginRequest::ID, LoginHandler());
-
-conn.setPacketCallback([&](Connection& c, BasePacket& pkt) {
-    dispatcher.dispatch(c, pkt);
-});
-```
-
----
-
-## 扩展新的 Socket 后端
-
-只需实现 `ISocket` 接口，即可接入任意 Socket 后端：
-
-```cpp
-class EpollSocket : public ISocket
-{
-public:
-    bool send(const uint8_t* data, size_t len) override {
-        // epoll 发送实现
-    }
-    
-    int recv(uint8_t* buffer, size_t len) override {
-        // epoll 接收实现
-    }
-    
-    void close() override {
-        // 关闭实现
-    }
-};
-```
-
-无需修改核心框架代码，**零侵入式扩展**。
-
----
-
-## 核心设计原则
-
-### 原则一：协议与传输分离
-
-```text
-Packet ──(数据)──→ Codec ──(字节流)──→ Socket
-                        ↑
-                   解耦边界
-```
-
-**好处**：
-- 协议变更不影响网络层
-- 网络层优化不影响协议定义
-- 支持多种序列化方案（Protobuf/FlatBuffers）
-
-### 原则二：无 Enum 协议 ID
-
-使用 **TypeHash** 替代传统 enum：
-
-```cpp
-// 传统方式（需要维护枚举）
-enum PacketType { LOGIN, CHAT, MOVE };
-
-// RealmNet 方式（自动计算）
-static constexpr TypeID ID = fnv1a("LoginRequest");
-```
-
-**好处**：
-- 无需集中维护枚举
-- 编译期自动计算 ID
-- 避免 ID 冲突
-- 更好的代码组织
-
-### 原则三：自动协议注册
-
-```cpp
-REGISTER_PACKET(LoginRequest)  // 一行代码完成注册
-```
-
-**好处**：
-- 零配置启动
-- 编译期检查
-- 避免运行时注册遗漏
-
----
-
-## 架构演进路线
-
-```text
-阶段一：基础数据包框架（当前）
-    └── 协议定义、编解码、分发
-    
-阶段二：多后端支持
-    ├── BSD Socket（已实现）
-    ├── epoll/kqueue
-    └── IOCP
-    
-阶段三：高性能优化
-    ├── 内存池
-    ├── 零拷贝
-    └── 协程化
-    
-阶段四：完整解决方案
-    ├── RPC 支持
-    ├── 负载均衡
-    └── 监控与追踪
-```
+然后用 `Server<MyEpollSocket>` 和 `Client<MyEpollSocket>` 即可，无需改动框架。
 
 ---
 
 ## 许可证
 
-MIT License
-
----
-
-## 联系方式
-
-如有问题或建议，欢迎提交 Issue 或 PR。
+MIT

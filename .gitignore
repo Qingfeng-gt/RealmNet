@@ -55,3 +55,6 @@ install_manifest.txt
 # Shelf
 /shelf/
 /cmake-build-debug-mingw
+/.idea
+/.vscode
+/cmake-build-release-mingw
