@@ -6,9 +6,23 @@
 
 ## 简介
 
-**RealmNet** 是一个 C++ 网络数据包框架，专注于协议的编解码、分发和管理。通过实现 `ISocket` 接口，可以接入任意 Socket 后端（BSD Socket / epoll / IOCP 等），快速构建网络通信系统。
+**RealmNet** 是一个 C++ 网络数据包框架，只做三件事：**协议定义、编解码、自动分发**。
 
-核心框架在 `realmnet/` 下。根目录 `server/`、`client/` 是基于 BSD Socket 的登录示例。
+它**不做**的事同样重要：
+
+| 框架负责 | 不负责（由 ISocket 后端决定） |
+|----------|------------------------------|
+| 协议序列化 / 反序列化 | 线程模型（单线程 / 线程池） |
+| 按 Packet::ID 自动路由到 Handler | I/O 模型（select / epoll / IOCP） |
+| 连接管理（收发缓冲、粘包处理） | 并发策略（多线程、协程） |
+
+`ISocket` 是唯一的扩展点。接入 epoll 就是高并发，接入 BSD Socket 就是单线程——框架核心代码**零改动**。
+
+```
+Handler → PacketDispatcher → Codec → Connection → ISocket
+  ↑                         ↑         ↑              ↑
+  你的逻辑                   框架核心                 你选的并发模型
+```
 
 ```mermaid
 flowchart TB
@@ -199,7 +213,9 @@ class MyEpollSocket : public RealmNet::ISocket
 };
 ```
 
-然后用 `Server<MyEpollSocket>` 和 `Client<MyEpollSocket>` 即可，无需改动框架。
+然后用 `Server<MyEpollSocket>` 和 `Client<MyEpollSocket>` 即可。
+
+线程模型、I/O 多路复用、并发策略都由你选的 Socket 后端决定，框架核心代码不需要改动。
 
 ---
 
