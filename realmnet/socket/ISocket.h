@@ -5,6 +5,7 @@
 #ifndef REALMNET_ISOCKET_H
 #define REALMNET_ISOCKET_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace RealmNet
