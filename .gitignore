@@ -54,3 +54,4 @@ install_manifest.txt
 
 # Shelf
 /shelf/
+/cmake-build-debug-mingw
