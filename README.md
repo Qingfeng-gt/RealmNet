@@ -10,31 +10,40 @@
 
 核心框架在 `realmnet/` 下。根目录 `server/`、`client/` 是基于 BSD Socket 的登录示例。
 
-```text
-                 ┌──────────────┐
-                 │   Handler    │  ← 你的业务逻辑
-                 └──────┬───────┘
-                        ↓
-              ┌─────────────────┐
-              │ PacketDispatcher│  ← 按 Packet::ID 自动路由
-              └────────┬────────┘
-                       ↓
-        ┌──────────────┼──────────────┐
-        ▼              ▼              ▼
-   ┌─────────┐   ┌──────────┐   ┌──────────┐
-   │ Factory │   │  Codec   │   │ TypeHash │
-   └─────────┘   └──────────┘   └──────────┘
-                       ↓
-               ┌──────────────┐
-               │  Connection  │  ← 胶水层，绑定 codec + socket
-               └──────┬───────┘
-                      ↓
-               ┌──────────────┐
-               │   ISocket    │  ← 扩展点
-               └──────┬───────┘
-        ┌─────────────┼─────────────┐
-        ▼             ▼             ▼
-   BSD Socket       epoll         IOCP
+```mermaid
+flowchart TB
+    Handler["Handler<br/>你的业务逻辑"] --> Dispatcher
+
+    subgraph core["框架核心"]
+        Dispatcher["PacketDispatcher<br/>按 Packet::ID 自动路由"]
+        Factory["Factory<br/>协议注册"]
+        Codec["Codec<br/>编解码"]
+        TypeHash["TypeHash<br/>无 enum 协议 ID"]
+    end
+
+    Dispatcher --> Factory
+    Dispatcher --> Codec
+    Dispatcher --> TypeHash
+
+    Codec --> Conn["Connection<br/>胶水层"]
+    Conn --> ISocket["ISocket<br/>扩展点"]
+
+    ISocket --> BSD["BSD Socket"]
+    ISocket --> Epoll["epoll / kqueue"]
+    ISocket --> IOCP["IOCP"]
+```
+
+### 通信流程
+
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant S as 服务端
+
+    C->>S: connect()
+    C->>S: LoginRequest { account, password }
+    S->>S: PacketDispatcher 路由到 Handler
+    S->>C: LoginResponse { success, message }
 ```
 
 ---
@@ -56,8 +65,8 @@ cmake --build . --config Debug
 ```bash
 mkdir build && cd build
 cmake .. -G "MinGW Makefiles" \
-  -DCMAKE_C_COMPILER=D:/Qt/Tools/mingw1310_64/bin/gcc.exe \
-  -DCMAKE_CXX_COMPILER=D:/Qt/Tools/mingw1310_64/bin/g++.exe
+  -DCMAKE_C_COMPILER=/path/to/mingw/bin/gcc.exe \
+  -DCMAKE_CXX_COMPILER=/path/to/mingw/bin/g++.exe
 cmake --build .
 ```
 
